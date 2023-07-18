@@ -39,6 +39,7 @@ from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCE
     OPENAI_CLIP_MEAN, OPENAI_CLIP_STD
 from timm.layers import PatchEmbed, Mlp, DropPath, trunc_normal_, lecun_normal_, resample_patch_embed, \
     resample_abs_pos_embed, RmsNorm, PatchDropout, use_fused_attn, SwiGLUPacked
+from .layers import BatchNorm, UN1d
 from ._builder import build_model_with_cfg
 from ._manipulate import named_apply, checkpoint_seq, adapt_input_conv
 from ._registry import generate_default_cfgs, register_model, register_model_deprecations
@@ -126,6 +127,7 @@ class Block(nn.Module):
             act_layer=nn.GELU,
             norm_layer=nn.LayerNorm,
             mlp_layer=Mlp,
+            mlp_norm_layer=None
     ):
         super().__init__()
         self.norm1 = norm_layer(dim)
@@ -147,6 +149,7 @@ class Block(nn.Module):
             hidden_features=int(dim * mlp_ratio),
             act_layer=act_layer,
             drop=proj_drop,
+            norm_layer=mlp_norm_layer,
         )
         self.ls2 = LayerScale(dim, init_values=init_values) if init_values else nn.Identity()
         self.drop_path2 = DropPath(drop_path) if drop_path > 0. else nn.Identity()
@@ -414,6 +417,7 @@ class VisionTransformer(nn.Module):
             act_layer: Optional[Callable] = None,
             block_fn: Callable = Block,
             mlp_layer: Callable = Mlp,
+            mlp_norm_layer: Optional[Callable] = None
     ):
         """
         Args:
@@ -491,6 +495,7 @@ class VisionTransformer(nn.Module):
                 norm_layer=norm_layer,
                 act_layer=act_layer,
                 mlp_layer=mlp_layer,
+                mlp_norm_layer=mlp_norm_layer,
             )
             for i in range(depth)])
         self.norm = norm_layer(embed_dim) if not use_fc_norm else nn.Identity()
@@ -1514,6 +1519,38 @@ def vit_tiny_patch16_384(pretrained=False, **kwargs) -> VisionTransformer:
 
 
 @register_model
+def vit_tiny_bn_ffnbn_relu_patch16_224(pretrained=False, **kwargs):
+    """ ViT-Tiny (Vit-Ti/16)
+    """
+    model_kwargs = dict(patch_size=16, embed_dim=192, depth=12, num_heads=3, act_layer=nn.ReLU,
+                        norm_layer=BatchNorm, mlp_norm_layer=BatchNorm, **kwargs)
+    model = _create_vision_transformer(
+        'vit_tiny_patch16_224', pretrained=pretrained, **model_kwargs)
+    return model
+
+
+@register_model
+def vit_tiny_un_patch16_224(pretrained=False, **kwargs):
+    model_kwargs = dict(patch_size=16, embed_dim=192, depth=12, num_heads=3, norm_layer=UN1d, **kwargs)
+    model = _create_vision_transformer('vit_tiny_patch16_224', pretrained=pretrained, **model_kwargs)
+    return model
+
+
+@register_model
+def vit_tiny_un_ffnun_patch16_224(pretrained=False, **kwargs):
+    model_kwargs = dict(patch_size=16, embed_dim=192, depth=12, num_heads=3, norm_layer=UN1d, mlp_norm_layer=UN1d, **kwargs)
+    model = _create_vision_transformer('vit_tiny_patch16_224', pretrained=pretrained, **model_kwargs)
+    return model
+
+
+@register_model
+def vit_tiny_un_ffnun_relu_patch16_224(pretrained=False, **kwargs):
+    model_kwargs = dict(patch_size=16, embed_dim=192, depth=12, num_heads=3, act_layer=nn.ReLU, norm_layer=UN1d, mlp_norm_layer=UN1d, **kwargs)
+    model = _create_vision_transformer('vit_tiny_patch16_224', pretrained=pretrained, **model_kwargs)
+    return model
+
+
+@register_model
 def vit_small_patch32_224(pretrained=False, **kwargs) -> VisionTransformer:
     """ ViT-Small (ViT-S/32)
     """
@@ -1537,6 +1574,35 @@ def vit_small_patch16_224(pretrained=False, **kwargs) -> VisionTransformer:
     """
     model_args = dict(patch_size=16, embed_dim=384, depth=12, num_heads=6)
     model = _create_vision_transformer('vit_small_patch16_224', pretrained=pretrained, **dict(model_args, **kwargs))
+    return model
+
+@register_model
+def vit_small_bn_ffnbn_relu_patch16_224(pretrained=False, **kwargs):
+    model_kwargs = dict(patch_size=16, embed_dim=384, depth=12, num_heads=3, act_layer=nn.ReLU,
+                        norm_layer=BatchNorm, mlp_norm_layer=BatchNorm, **kwargs)
+    model = _create_vision_transformer(
+        'vit_small_patch16_224', pretrained=pretrained, **model_kwargs)
+    return model
+
+
+@register_model
+def vit_small_un_patch16_224(pretrained=False, **kwargs):
+    model_kwargs = dict(patch_size=16, embed_dim=384, depth=12, num_heads=3, norm_layer=UN1d, **kwargs)
+    model = _create_vision_transformer('vit_small_patch16_224', pretrained=pretrained, **model_kwargs)
+    return model
+
+
+@register_model
+def vit_small_un_ffnun_patch16_224(pretrained=False, **kwargs):
+    model_kwargs = dict(patch_size=16, embed_dim=384, depth=12, num_heads=3, norm_layer=UN1d, mlp_norm_layer=UN1d, **kwargs)
+    model = _create_vision_transformer('vit_small_patch16_224', pretrained=pretrained, **model_kwargs)
+    return model
+
+
+@register_model
+def vit_small_un_ffnun_relu_patch16_224(pretrained=False, **kwargs):
+    model_kwargs = dict(patch_size=16, embed_dim=384, depth=12, num_heads=3, act_layer=nn.ReLU, norm_layer=UN1d, mlp_norm_layer=UN1d, **kwargs)
+    model = _create_vision_transformer('vit_small_patch16_224', pretrained=pretrained, **model_kwargs)
     return model
 
 
@@ -1585,6 +1651,27 @@ def vit_base_patch16_224(pretrained=False, **kwargs) -> VisionTransformer:
     """
     model_args = dict(patch_size=16, embed_dim=768, depth=12, num_heads=12)
     model = _create_vision_transformer('vit_base_patch16_224', pretrained=pretrained, **dict(model_args, **kwargs))
+    return model
+
+
+@register_model
+def vit_base_un_patch16_224(pretrained=False, **kwargs):
+    model_kwargs = dict(patch_size=16, embed_dim=768, depth=12, num_heads=12, norm_layer=UN1d, **kwargs)
+    model = _create_vision_transformer('vit_base_patch16_224', **model_kwargs)
+    return model
+
+
+@register_model
+def vit_base_un_ffnun_patch16_224(pretrained=False, **kwargs):
+    model_kwargs = dict(patch_size=16, embed_dim=768, depth=12, num_heads=12, norm_layer=UN1d, mlp_norm_layer=UN1d, **kwargs)
+    model = _create_vision_transformer('vit_base_patch16_224', pretrained=pretrained, **model_kwargs)
+    return model
+
+
+@register_model
+def vit_base_un_ffnun_relu_patch16_224(pretrained=False, **kwargs):
+    model_kwargs = dict(patch_size=16, embed_dim=768, depth=12, num_heads=12, act_layer=nn.ReLU, norm_layer=UN1d, mlp_norm_layer=UN1d, **kwargs)
+    model = _create_vision_transformer('vit_base_patch16_224', pretrained=pretrained, **model_kwargs)
     return model
 
 
