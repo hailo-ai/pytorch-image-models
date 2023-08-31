@@ -1531,13 +1531,6 @@ def vit_tiny_bn_ffnbn_relu_patch16_224(pretrained=False, **kwargs):
 
 @register_model
 def vit_tiny_un_patch16_224(pretrained=False, **kwargs):
-    model_kwargs = dict(patch_size=16, embed_dim=192, depth=12, num_heads=3, norm_layer=UN1d, **kwargs)
-    model = _create_vision_transformer('vit_tiny_patch16_224', pretrained=pretrained, **model_kwargs)
-    return model
-
-
-@register_model
-def vit_tiny_un_ffnun_patch16_224(pretrained=False, **kwargs):
     model_kwargs = dict(patch_size=16, embed_dim=192, depth=12, num_heads=3, norm_layer=UN1d, mlp_norm_layer=UN1d, **kwargs)
     model = _create_vision_transformer('vit_tiny_patch16_224', pretrained=pretrained, **model_kwargs)
     return model
